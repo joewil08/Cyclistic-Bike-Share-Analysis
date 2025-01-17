@@ -2,7 +2,7 @@
 
 Capstone Project for the Google Data Analytics Professional Certificate
 
-Download and open the **`cyclistic-bike-share-analysis.html`** file in your browser to view my detailed process, code, visualizations, analysis, etc. that contributed to the completion of this project!
+Download and open the **`cyclistic-bike-share-analysis.html`** file in your browser to easily view my detailed process, code, visualizations, analysis, etc. that contributed to the completion of this project!
 
 ## Introduction
 
@@ -33,7 +33,7 @@ The director of marketing's goal is to design marketing strategies aimed at conv
 ## File Overview
 
 Here’s a quick explanation of the key files in this repository:
-- **`cyclistic-bike-share-analysis.html`**: Download and open in your browser to view my detailed process, code, and analysis for completing the case study!
+- **`cyclistic-bike-share-analysis.html`**: Download and open in your browser to easily view my detailed process, code, and analysis for completing the case study!
 - **`cyclistic-bike-share-analysis.Rmd`**: R Markdown file that was knitted into the above .html file.
 - **`/visualizations/`**: Folder that contains all 11 visualizations used in analysis as .png files.
 - **`/scripts/`**: Folder that contains all the R scripts used for preparing, processing, and analyzing data.
