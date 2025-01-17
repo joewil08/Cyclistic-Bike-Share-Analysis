@@ -1,0 +1,426 @@
+---
+title: "Cyclistic Bike-Share Analysis"
+author: "Joseph Wilson"
+date: "2025-01-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+As a part of obtaining my [Google Data Analytics Professional Certificate](https://www.coursera.org/professional-certificates/google-data-analytics), I have completed this capstone project.
+
+In order to answer the business questions, I followed the steps of the data analysis:
+
+-   Ask
+
+-   Prepare
+
+-   Process
+
+-   Analyze
+
+-   Share
+
+-   Act
+
+The tools I used include the [R programming language](https://www.r-project.org/) and the [RStudio IDE](https://posit.co/download/rstudio-desktop/).
+
+## Scenario
+
+You are a junior data analyst working on the marketing analyst team at Cyclistic, a bike-share company in Chicago. The director of marketing believes the company’s future success depends on maximizing the number of annual memberships. Therefore, your team wants to understand how casual riders and annual members use Cyclistic bikes differently. From these insights, your team will design a new marketing strategy to convert casual riders into annual members. But first, Cyclistic executives must approve your recommendations, so they must be backed up with compelling data insights and professional data visualizations.
+
+The director of marketing's goal is to design marketing strategies aimed at converting casual riders into annual members. In order to do that, however, the team needs to better understand how annual members and casual riders differ, why casual riders would buy a membership, and how digital media could affect their marketing tactics. The team is interested in analyzing the Cyclistic historical bike trip data to identify trends.
+
+## Ask
+
+Three questions will guide the future marketing program:
+
+1.  How do annual members and casual riders use Cyclistic bikes differently?
+2.  Why would casual riders buy Cyclistic annual memberships?
+3.  How can Cyclistic use digital media to influence casual riders to become members?
+
+## Prepare
+
+I will use Cyclistic’s historical trip data to analyze and identify trends.
+
+Cyclistic is a fictional company. Divvy is an actual bike company in Chicago that provides trip data that can be used to complete the business task. I downloaded the Divvy trip data from all 12 months of 2024 [here](https://divvy-tripdata.s3.amazonaws.com/index.html). The data has been made available by Motivate International Inc. under this [license](https://divvybikes.com/data-license-agreement).
+
+Now, I will prepare the data for analysis.
+
+```{r}
+# install and load packages
+install.packages("tidyverse", repos="http://cran.us.r-project.org")
+install.packages("geosphere", repos="http://cran.us.r-project.org")
+install.packages("leaflet", repos="http://cran.us.r-project.org")
+library(tidyverse)
+library(geosphere)
+library(leaflet)
+```
+
+```{r}
+# import the trip data for all 12 months
+jan2024 <- read.csv("data/2024-tripdata-raw/202401-divvy-tripdata.csv")
+feb2024 <- read.csv("data/2024-tripdata-raw/202402-divvy-tripdata.csv")
+mar2024 <- read.csv("data/2024-tripdata-raw/202403-divvy-tripdata.csv")
+apr2024 <- read.csv("data/2024-tripdata-raw/202404-divvy-tripdata.csv")
+may2024 <- read.csv("data/2024-tripdata-raw/202405-divvy-tripdata.csv")
+jun2024 <- read.csv("data/2024-tripdata-raw/202406-divvy-tripdata.csv")
+jul2024 <- read.csv("data/2024-tripdata-raw/202407-divvy-tripdata.csv")
+aug2024 <- read.csv("data/2024-tripdata-raw/202408-divvy-tripdata.csv")
+sep2024 <- read.csv("data/2024-tripdata-raw/202409-divvy-tripdata.csv")
+oct2024 <- read.csv("data/2024-tripdata-raw/202410-divvy-tripdata.csv")
+nov2024 <- read.csv("data/2024-tripdata-raw/202411-divvy-tripdata.csv")
+dec2024 <- read.csv("data/2024-tripdata-raw/202412-divvy-tripdata.csv")
+```
+
+```{r}
+# check column names for consistency
+colnames(jan2024)
+colnames(feb2024) == colnames(jan2024)
+colnames(mar2024) == colnames(jan2024)
+colnames(apr2024) == colnames(jan2024)
+colnames(may2024) == colnames(jan2024)
+colnames(jun2024) == colnames(jan2024)
+colnames(jul2024) == colnames(jan2024)
+colnames(aug2024) == colnames(jan2024)
+colnames(sep2024) == colnames(jan2024)
+colnames(oct2024) == colnames(jan2024)
+colnames(nov2024) == colnames(jan2024)
+colnames(dec2024) == colnames(jan2024)
+```
+
+```{r}
+# check column data types for consistency
+sapply(jan2024, class)
+sapply(feb2024, class) == sapply(jan2024, class)
+sapply(mar2024, class) == sapply(jan2024, class)
+sapply(apr2024, class) == sapply(jan2024, class)
+sapply(may2024, class) == sapply(jan2024, class)
+sapply(jun2024, class) == sapply(jan2024, class)
+sapply(jul2024, class) == sapply(jan2024, class)
+sapply(aug2024, class) == sapply(jan2024, class)
+sapply(sep2024, class) == sapply(jan2024, class)
+sapply(oct2024, class) == sapply(jan2024, class)
+sapply(nov2024, class) == sapply(jan2024, class)
+sapply(dec2024, class) == sapply(jan2024, class)
+```
+
+There being no `FALSE` values confirm that all the column names and data types match up across all data frames.
+
+Therefore, the data frames can be merged into one data frame without any problems.
+
+```{r}
+# merge the data frames into one data frame
+tripdata <- bind_rows(jan2024, feb2024, mar2024, apr2024, may2024, jun2024,
+                      jul2024, aug2024, sep2024, oct2024, nov2024, dec2024)
+```
+
+## Process
+
+Now, I will process the data to be used for analysis.
+
+```{r}
+# check the merged data
+head(tripdata)
+str(tripdata)
+```
+
+```{r}
+# convert character columns to date-time columns
+tripdata$started_at <- as.POSIXct(tripdata$started_at)
+tripdata$ended_at <- as.POSIXct(tripdata$ended_at)
+```
+
+```{r}
+# create new columns from date-time
+tripdata <- tripdata %>%
+  mutate(
+    year = year(started_at),
+    month = month(started_at, label = TRUE),
+    day = day(started_at),
+    day_of_week = wday(started_at, label = TRUE),
+    start_time = hour(started_at),
+    trip_length = as.numeric(difftime(ended_at, started_at, units = "mins"))
+  )
+```
+
+```{r}
+# create column for distance traveled in km
+tripdata <- tripdata %>%
+  mutate(
+    trip_distance = distVincentySphere(
+      cbind(start_lng, start_lat), cbind(end_lng, end_lat)) / 1000
+  )
+```
+
+```{r}
+# clean by removing data where the trip length is 0 or negative and where the trip distance is NA
+tripdata_clean <- tripdata %>%
+  filter(trip_length > 0 & !is.na(trip_distance))
+```
+
+```{r}
+# check the cleaned data
+str(tripdata_clean)
+```
+
+This confirms that the data frame contains the correct column names and data types, as well as the cleaned data.
+
+## Analyze
+
+Now, I will analyze the data for trends, relationships, and insights.
+
+```{r}
+# 1. member vs. casual total trips
+tripdata_clean %>%
+  group_by(member_casual) %>%
+  summarize(number_of_trips = n(),
+            percentage_of_total_trips = n() / nrow(tripdata_clean) * 100)
+
+ggplot(data = tripdata_clean) +
+  geom_bar(mapping = aes(x = member_casual, fill = member_casual)) +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "Total Trips by Customer Type",
+       fill = "Customer Type",
+       x = "Customer Type",
+       y = "Number of Trips")
+```
+
+The above tibble and bar chart shows that in 2024, annual members make up about 67% of the total trips while casual riders make up about 33%.
+
+```{r}
+# 2. member vs. casual bike types
+tripdata_clean %>% 
+  group_by(rideable_type, member_casual) %>% 
+  summarize(number_of_trips = n(),
+            percentage_of_total_trips = n() / nrow(tripdata_clean) * 100)
+
+ggplot(data = tripdata_clean) +
+  geom_bar(mapping = aes(x = rideable_type, fill = member_casual), 
+           position = "dodge") +
+  labs(title = "Comparison of Bike Types by Customer Type",
+       fill = "Customer Type",
+       x = "Bike Type",
+       y = "Number of Trips")
+```
+
+Customers use electric bikes the most, followed by the classic bike then the electric scooter. More members use electric and classic bikes, however, more casual riders use electric scooters.
+
+```{r}
+# 3. member vs. casual total number of trips by day of the week
+tripdata_clean %>%
+  group_by(member_casual, day_of_week) %>% 
+  summarise(number_of_trips = n(), .groups="drop") %>% 
+  ggplot() +
+  geom_col(aes(x = day_of_week, y = number_of_trips, fill = member_casual), 
+           position = "dodge") +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "Distribution of Total Trips by Day of the Week and Customer Type",
+       fill = "Customer Type",
+       x = "Day of the Week",
+       y = "Number of Trips")
+```
+
+The number of trips made by casual riders increases during the weekends and decreases during the weekdays. The opposite happens for members as the number of trips decreases during the weekends and increases during the weekdays. This may suggest that casual riders use the bikes more for leisure while members use them more for work travel.
+
+```{r}
+# 4. member vs. casual total number of trips by month
+tripdata_clean %>%
+  group_by(member_casual, month) %>% 
+  summarise(number_of_trips = n(), .groups="drop") %>% 
+  ggplot() +
+  geom_col(aes(x = month, y = number_of_trips, fill = member_casual), 
+           position = "dodge") +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "Distribution of Total Trips by Month and Customer Type",
+       fill = "Customer Type",
+       x = "Month",
+       y = "Number of Trips")
+```
+
+For both casual riders and members, the least amount of trips take place in January while the most number of trips take place in September. The number of trips is lowest during the winter and highest during the summer.
+
+```{r}
+# 5. member vs. casual average trip length by day of the week
+tripdata_clean %>%
+  group_by(member_casual, day_of_week) %>% 
+  summarise(average_trip_length = mean(trip_length), .groups="drop") %>% 
+  ggplot() +
+  geom_col(aes(x = day_of_week, y = average_trip_length, fill = member_casual), 
+           position = "dodge") +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "Average Trip Length of Casuals and Members by Day of the Week",
+       fill = "Customer Type",
+       x = "Day of the Week",
+       y = "Trip Length (min)")
+```
+
+On average, casual riders go on longer trips than members. The average trip length of casuals is nearly double that of members on the weekends. The difference in the average between weekends and weekdays is higher for casuals than members. Longer trips may suggest that the casuals use the bikes for leisure.
+
+```{r}
+# 6. member vs. casual average trip length by month
+tripdata_clean %>%
+  group_by(member_casual, month) %>% 
+  summarise(average_trip_length = mean(trip_length), .groups="drop") %>% 
+  ggplot() +
+  geom_col(aes(x = month, y = average_trip_length, fill = member_casual), 
+           position = "dodge") +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "Average Trip Length of Casuals and Members by Month",
+       fill = "Customer Type",
+       x = "Month",
+       y = "Trip Length (min)")
+```
+
+There is a much wider range in the average trip length of casuals than members throughout the year. The average is higher for casuals the entire year. The average trip length is lowest in the late fall/early winter and highest in the late spring/early summer. Since the average is fairly consistent for members, it suggests that they use the bikes primarily for commuting. The average being higher for casuals during months with weather better suited for outdoor activity suggests that they use the bikes primarily for leisure.
+
+```{r}
+# 7. member vs. casual average trip distance
+tripdata_clean %>%
+  group_by(member_casual) %>% 
+  summarise(average_trip_distance = mean(trip_distance), .groups="drop") %>% 
+  ggplot() +
+  geom_col(aes(x = member_casual, y = average_trip_distance, fill = member_casual), 
+           position = "dodge") +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "Average Trip Distance by Customer Type",
+       fill = "Customer Type",
+       x = "Customer Type",
+       y = "Trip Distance (km)")
+```
+
+The average trip distance is fairly similar between casuals and members. Members have a slightly higher average.
+
+```{r}
+# 8. member vs. casual average trip distance by day of week
+tripdata_clean %>%
+  group_by(member_casual, day_of_week) %>% 
+  summarise(average_trip_distance = mean(trip_distance), .groups="drop") %>% 
+  ggplot() +
+  geom_col(aes(x = day_of_week, y = average_trip_distance, fill = member_casual), 
+           position = "dodge") +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "Average Trip Distance by Customer Type",
+       fill = "Customer Type",
+       x = "Day of the Week",
+       y = "Trip Distance (km)")
+```
+
+Casuals have an increase in the average travel distance during the weekends and a decrease during the weekdays. Members have a fairly consistent average throughout the entire week. The increase in casuals during the weekends could be due to using bikes for leisure activities.
+
+```{r}
+# 9. member vs. casual average trip distance by month
+tripdata_clean %>%
+  group_by(member_casual, month) %>% 
+  summarise(average_trip_distance = mean(trip_distance), .groups="drop") %>% 
+  ggplot() +
+  geom_col(aes(x = month, y = average_trip_distance, fill = member_casual), 
+           position = "dodge") +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(title = "Monthly Average Trip Distance by Customer Type",
+       fill = "Customer Type",
+       x = "Month",
+       y = "Trip Distance (km)")
+```
+
+Both members and casuals have an increase in trip distance during the summer and a decrease during the winter.
+
+```{r}
+# 10. member vs. casual hourly demand per day
+ggplot(data = tripdata_clean) +
+  geom_bar(mapping = aes(x = start_time, fill = member_casual)) +
+  facet_wrap(~day_of_week) +
+  scale_x_continuous(breaks = seq(0, 24, by = 6)) +
+  labs(title = "Hourly Demand per Day of the Week by Customer Type",
+       fill = "Customer Type",
+       x = "Hour",
+       y = "Number of Trips Started")
+```
+
+During the weekdays, the demand from members peaks before and after work hours. The demand from casuals also increases during those hours but not to the same degree as members. During the weekends, the demand from casuals and members peaks during the early afternoon. From this, members are more likely to use the bikes for their commute than casuals.
+
+```{r}
+# 11. member vs. casual most popular stations
+station_popularity <- tripdata_clean %>%
+  group_by(start_station_name, start_lng, start_lat, member_casual) %>%
+  summarise(usage_count = n(), .groups = "drop")
+member_station_popularity <- station_popularity %>% 
+  filter(member_casual == "member") %>% 
+  arrange(desc(usage_count)) %>% 
+  head(10)
+casual_station_popularity <- station_popularity %>% 
+  filter(member_casual == "casual") %>% 
+  arrange(desc(usage_count)) %>% 
+  head(10)
+# Create the leaflet map
+leaflet() %>%
+  addTiles() %>%
+  # add markers for top 10 stations for members
+  addCircleMarkers(
+    data = member_station_popularity,
+    lng = ~start_lng, lat = ~start_lat,
+    radius = ~sqrt(usage_count) / 15,
+    color = "blue", fillOpacity = 0.7,
+    popup = ~paste0(start_station_name, "<br>Members: ", usage_count)
+  ) %>%
+  # add markers for top 10 stations for casuals
+  addCircleMarkers(
+    data = casual_station_popularity,
+    lng = ~start_lng, lat = ~start_lat,
+    radius = ~sqrt(usage_count) / 15,
+    color = "green", fillOpacity = 0.7,
+    popup = ~paste0(start_station_name, "<br>Casuals: ", usage_count)
+  ) %>%
+  addLegend(
+    position = "bottomright",
+    title = "Customer Type",
+    colors = c("blue", "green"),
+    labels = c("Members", "Casuals")
+  )
+```
+
+The top 10 most used stations by casuals are located closer to Lake Michigan. The top 10 most used stations by members are located further inland. It appears that casuals mostly use the stations that are near a scenic view for leisure activity while members mostly use stations for commuting within the city.
+
+## Share
+
+From the above visualizations, annual members and casual riders use Cyclistic bikes differently in the following ways:
+
+-   Members make up the majority of the total number of trips.
+
+-   For members, there is an increase in trips during the weekdays and a decrease during the weekends. For casuals, there is a decrease in trips during the weekdays and an increase during the weekends.
+
+-   On average, casuals have a longer trip duration than members. The average for casuals is highest during the weekends while the average for members stays fairly consistent throughout the entire week.
+
+-   The average trip duration throughout the year for members stays fairly consistent. For casuals, the average is at its peak during the summer months and lowest during the winter months.
+
+-   Members have a slightly larger average trip distance than casuals. The average for members remains fairly consistent throughout the entire week while the average for casuals increases during the weekends.
+
+-   During weekdays, hourly demand peaks during typical rush hours. During weekends, hourly demand peaks in the early afternoon. Hourly demand from members is highest on weekdays. Hourly demand from casuals is highest on weekends.
+
+-   The most popular stations for casuals are closer to Lake Michigan while the most popular stations for members are further inland.
+
+These findings suggest that casual riders are more likely to use Cyclistic bikes for leisure activity while annual members are more likely to use them for commuting to work.
+
+## Act
+
+Based on my analysis, my top 3 recommendations for maximizing the number of annual memberships include:
+
+1.  Focus marketing efforts at stations near Lake Michigan. Maximize the use of banners, digital ads, and staff outreach at these locations during weekends when casual riders are most active.
+
+2.  Introduce discounts and/or free trials starting in late spring/early summer. Share promotions in the form of digital ads.
+
+3.  During weekdays, highlight the benefits of the annual membership that appeal to people commuting to work. During weekends, highlight the benefits of the annual membership that appeal to people riding bikes for leisure activity.
+
+In the future, I can expand on my findings with data that provides the personally identifiable information of customers. Through this data, I may be able to determine:
+
+-   Whether the customer lives near or within the Cyclistic service area.
+
+-   Whether the customer is purchasing multiple single passes.
+
+## Conclusion
+
+Thank you for taking the time to follow along and see my process for completing this case study!
