@@ -8,7 +8,7 @@ Download and open the **`cyclistic-bike-share-analysis.html`** file in your brow
 
 As a part of obtaining my [Google Data Analytics Professional Certificate](https://www.coursera.org/professional-certificates/google-data-analytics), I have completed this capstone project.
 
-In order to complete the case study, I followed the steps of the data analysis:
+In order to complete the case study, I followed the steps of the data analysis process:
 
 -   Ask
 
